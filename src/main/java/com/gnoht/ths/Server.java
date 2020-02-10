@@ -1,9 +1,5 @@
 package com.gnoht.ths;
 
-import com.gnoht.ths.handlers.NotFoundHandler;
-import com.gnoht.ths.handlers.ResourceHandler;
-import com.gnoht.ths.handlers.UnsupportedMethodHandler;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,6 +14,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.gnoht.ths.handlers.NotFoundHandler;
+import com.gnoht.ths.handlers.ResourceHandler;
+import com.gnoht.ths.handlers.UnsupportedMethodHandler;
 
 /**
  * @author ikumen@gnoht.com
@@ -85,6 +85,17 @@ public class Server {
 
   public static void main(String[] args) {
     Options options = Options.from(args);
+    
+    if (options.contains("help")) {
+      // show usage
+      System.out.println("Usage: "
+          + "\njava -cp <path> com.gnoht.ths.Server \\"
+          + "\n   --port=<number>          port to bind to, defaults to 8000"
+          + "\n   --document-root=<path>   path to document root, defaults to current directory"
+          + "\n   --pool-size=<number>     number of threads, defaults to 10"
+          + "\n   --help                   display this message\n");
+      return;
+    }
     
     int port = options.getInt("port", DEFAULT_PORT);
     Path rootPath = Paths.get(options.get("document-root", DEFAULT_DOCUMENT_ROOT));

@@ -1,7 +1,5 @@
 package com.gnoht.ths;
 
-import com.gnoht.ths.handlers.HandlerException;
-
 /**
  * @author ikumen@gnoht.com
  */
