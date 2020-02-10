@@ -1,6 +1,9 @@
 package com.gnoht.ths;
 
+import com.gnoht.ths.handlers.NotFoundHandler;
 import com.gnoht.ths.handlers.ResourceHandler;
+import com.gnoht.ths.handlers.UnsupportedMethodHandler;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -32,7 +35,9 @@ public class Server {
     this.executor = Executors.newFixedThreadPool(threadPoolSize);
     this.documentRoot = new DocumentRoot(documentRootPath);
     this.requestHandlers = Arrays.asList(
-      new ResourceHandler(documentRoot)
+      new ResourceHandler(documentRoot),
+      new NotFoundHandler(documentRoot),
+      new UnsupportedMethodHandler()
     );
 
   }

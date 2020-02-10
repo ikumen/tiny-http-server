@@ -28,7 +28,7 @@ public class DocumentRoot {
    */
   public Path resolve(String uri) {
     return uri.startsWith("/")
-        ? root.resolve(uri.substring(1))
+        ? resolve(uri.substring(1)) // recursively handle multiple slashes e.g, ////
         : root.resolve(uri);
   }
 }

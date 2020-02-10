@@ -7,13 +7,16 @@ import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.gnoht.ths.handlers.HandlerException;
+import com.gnoht.ths.support.IoHelper;
+
 /**
  * @author ikumen@gnoht.com
  */
 public class SocketProcessor implements Callable<Void> {
 
   private static final Logger logger = Logger.getLogger(SocketProcessor.class.getSimpleName());
-
+  
   private final Socket socket;
   private final List<RequestHandler> requestHandlers;
 
@@ -25,21 +28,28 @@ public class SocketProcessor implements Callable<Void> {
   @Override
   public Void call() {
     try {
-      logger.info("building request");
       Request request = Request.from(socket.getInputStream());
-      logger.info("building response");
       Response response = new Response(socket.getOutputStream());
 
+      boolean handled = false; 
       for (RequestHandler handler : requestHandlers) {
-        logger.info("handling request");
-        if (handler.handle(request, response)) {
-          logger.log(Level.INFO, "request handled: " + socket.getRemoteSocketAddress());
+        handled = handler.handle(request, response);
+        if (handled) {
+          logger.log(Level.INFO, "Request handled: " + socket.getRemoteSocketAddress());
           break;
         }
       }
-    } catch (IOException e) {
-      logger.log(Level.WARNING, "Unable to process", e);
-      // basically ignore
+      
+      if (!handled) {
+        IoHelper.sendError(HttpStatus.INTERNAL_SERVER_ERROR, response);
+      }
+      
+    } catch (IOException | IllegalArgumentException e ) {
+      logger.log(Level.WARNING, "Unable to process connection", e);
+    } catch (HandlerException e) {
+      IoHelper.sendError(HttpStatus.INTERNAL_SERVER_ERROR, socket);
+    } finally {
+      IoHelper.closeQuietly(socket);
     }
     return null;
   }

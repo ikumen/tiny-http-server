@@ -19,9 +19,8 @@ public class Response {
   private final OutputStream outputStream;
 
   private Map<String, String> headers;
-  private String version;
+  private String version = DEFAULT_VERSION;
   private HttpStatus status;
-  private Writer writer;
 
   public Response(OutputStream outputStream) {
     this.outputStream = outputStream;
@@ -48,42 +47,29 @@ public class Response {
     return outputStream;
   }
 
-  public Writer getWriter() {
-    if (writer == null)
-      writer = new PrintWriter(outputStream);
-    return writer;
-  }
-
   public Response write(String s) throws IOException {
-    return write(s, false);
+    outputStream.write(s.getBytes()); return this;
   }
-
-  public Response write(String s, boolean flush) throws IOException {
-    getWriter().write(s);
-    if (flush)
-      return flush();
-    return this;
+  
+  public Response write(byte[] bytes) throws IOException {
+    getOutputStream().write(bytes); return this;
   }
 
   public Response sendHeaders() throws IOException {
-    System.out.println("Sending headers");
-    Writer writer = getWriter();
     for (String name: getHeaders().keySet())
-      writer.write(String.format(HEADER_FORMAT, name, getHeader(name)));
+      write(String.format(HEADER_FORMAT, name, getHeader(name)));
     return this;
   }
 
   public Response sendStatus() throws IOException {
-    System.out.println("Sending status");
     if (status == null)
-      throw new IllegalStateException("HTTP status not set");
-    getWriter().write(String.format(STATUS_LINE_FORMAT, getVersion(), status.getCode(), status.getReason()));
+      throw new IllegalArgumentException("HTTP status not set");
+    write(String.format(STATUS_LINE_FORMAT, getVersion(), status.getCode(), status.getReason()));
     return this;
   }
 
   public Response flush() throws IOException {
-    System.out.println("Flushing");
-    getWriter().flush(); return this;
+    outputStream.flush(); return this;
   }
 
   public Map<String, String> getHeaders() {
@@ -97,8 +83,6 @@ public class Response {
   }
 
   public String getVersion() {
-    if (version == null)
-      return DEFAULT_VERSION;
     return version;
   }
 
