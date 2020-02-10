@@ -102,6 +102,7 @@ public class Server {
     int poolSize = options.getInt("pool-size", DEFAULT_POOL_SIZE);    
     
     Server server = new Server(port, rootPath, poolSize);
+    //https://stackoverflow.com/questions/48510441/closing-socket-on-program-termination
     Runtime.getRuntime()
       .addShutdownHook(
         new Thread(() -> server.stop()));
