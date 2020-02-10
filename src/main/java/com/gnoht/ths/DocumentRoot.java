@@ -27,8 +27,16 @@ public class DocumentRoot {
    * @return
    */
   public Path resolve(String uri) {
+    // normalize the given uri (i.e, don't trust it)
+    // - remove any query strings, we just want the path to the file
+    int queryStart = uri.indexOf('?');
+    if (queryStart != -1)
+      uri = uri.substring(0, queryStart);
+    // - remove any starting slash, this keep the requested paths confined to our document root    
     return uri.startsWith("/")
         ? resolve(uri.substring(1)) // recursively handle multiple slashes e.g, ////
         : root.resolve(uri);
   }
+  
+  
 }
