@@ -11,10 +11,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author ikumen@gnoht.com
@@ -23,6 +26,10 @@ public class Server {
 
   private static final Logger logger = Logger.getLogger("server");
 
+  public static final int DEFAULT_PORT = 8000;
+  public static final int DEFAULT_POOL_SIZE = 10;
+  public static final String DEFAULT_DOCUMENT_ROOT = "";
+  
   private final int port;
   private final ExecutorService executor;
   private final DocumentRoot documentRoot;
@@ -30,7 +37,7 @@ public class Server {
 
   private ServerSocket server;
 
-  public Server(int port, int threadPoolSize, Path documentRootPath) {
+  public Server(int port, Path documentRootPath, int threadPoolSize) {
     this.port = port;
     this.executor = Executors.newFixedThreadPool(threadPoolSize);
     this.documentRoot = new DocumentRoot(documentRootPath);
@@ -43,19 +50,18 @@ public class Server {
   }
 
   public void start() {
-    logger.info("-----------------------------");
-    logger.info("    Starting Tiny Http");
-    logger.info("");
-    logger.info("port=" + port);
-    logger.info("documents=" + documentRoot);
-    logger.info("-----------------------------");
 
     try {
       server = new ServerSocket(port);
+      
+      System.out.println(String.format("Server started on %s:%d", 
+          server.getInetAddress().getHostName(), port));
+      
       while (!server.isClosed()) {
         Socket socket = server.accept();
         executor.submit(new SocketProcessor(socket, requestHandlers));
       }
+      
     } catch (IOException e) {
       logger.log(Level.SEVERE, "Server could not start", e);
     } finally {
@@ -64,18 +70,70 @@ public class Server {
   }
 
   public void stop() {
-    logger.fine("Shutting down server");
     try {
-      if (server != null) server.close();
+      if (server != null && !server.isClosed()) {
+        System.out.println("Shutting down server.");
+        server.close();
+      }
       if (executor != null) executor.shutdown();
     } catch (IOException e) {
-      logger.log(Level.WARNING, "Error shutting down server", e);
+      System.out.println("Error shutting down server");
+      e.printStackTrace();
       // ignoring
     }
   }
 
   public static void main(String[] args) {
-    new Server(8080, 10, Paths.get(""))
-        .start();
+    Options options = Options.from(args);
+    
+    int port = options.getInt("port", DEFAULT_PORT);
+    Path rootPath = Paths.get(options.get("document-root", DEFAULT_DOCUMENT_ROOT));
+    int poolSize = options.getInt("pool-size", DEFAULT_POOL_SIZE);    
+    
+    Server server = new Server(port, rootPath, poolSize);
+    Runtime.getRuntime()
+      .addShutdownHook(
+        new Thread(() -> server.stop()));
+    server.start();
+  }
+  
+  static class Options {
+    private final Map<String, String> options;
+    
+    public Options(Map<String, String> options) {
+      this.options = options;
+    }
+    
+    public static Options from(String[] args) {
+      return new Options(Stream.of(args)
+          .filter(s -> s.startsWith("--")) // found server option
+          .map(s -> s.substring(2)) // remove --
+          .map(s -> s.split("="))
+          .collect(Collectors.toMap(
+              a -> a[0].toLowerCase(), // store all options in lowercase 
+              a -> a.length == 1 ? "" : a[1])));
+    }
+    
+    public boolean contains(String key) {
+      return options.containsKey(key);
+    }
+    
+    public String get(String key) {
+      return options.get(key);
+    }
+    
+    public String get(String key, String defaultValue) {
+      return options.getOrDefault(key, defaultValue);
+    }
+    
+    public int getInt(String key) {
+      return Integer.parseInt(options.get(key));
+    }
+    
+    public int getInt(String key, int defaultValue) {
+      return options.containsKey(key) 
+        ? Integer.parseInt(options.get(key))
+        : defaultValue;
+    }
   }
 }
